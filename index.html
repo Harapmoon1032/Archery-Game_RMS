@@ -167,7 +167,7 @@
         
         #bow-container {
             position: fixed;
-            bottom: 100px; /* Moved lower from 100px to 80px */
+            bottom: 80px; /* Moved lower from 100px to 80px */
             left: 50%;
             transform: translate(-50%, 0);
             z-index: 100;
@@ -327,21 +327,6 @@
             pointer-events: none;
             z-index: 200;
         }
-        
-        /* Screenshot notification */
-        #screenshot-notification {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 5px;
-            font-size: 20px;
-            z-index: 2000;
-        }
     </style>
 </head>
 <body>
@@ -401,10 +386,6 @@
             <button id="exit-button" class="game-button">Keluar</button>
         </div>
     </div>
-    
-    <div id="screenshot-notification">
-        Screenshot berhasil diambil!
-    </div>
 
     <script>
         // Player data
@@ -421,6 +402,7 @@
         // Array to store leaderboard data (in a real application, this would be fetched from a server)
         let leaderboardData = [];
         
+        // Menyusun pertanyaan secara berurutan, tidak acak
         const questions = [
             {
                 question: "Siapakah Nama Julukan Raden Mas Said atau Mangkunegara I di Medan Pertempuran?",
@@ -466,33 +448,17 @@
                 question: "Perjanjian apakah yang menjadi symbol berdirinya Praja Mangkunegaran?",
                 correctAnswer: "Perjanjian Salatiga",
                 wrongAnswer: "Perjanjian Giyanti"
-            },{
+            },
+            {
                 question: "Kapan hari jadi berdirinya Kabupaten Wonogiri?",
                 correctAnswer: "19 Mei 1741 M",
                 wrongAnswer: "20 Mei 1741 M"
             },
         ];
 
-        function getRandomQuestion() {
-            // If all questions have been used, reset the used questions array
-            if (usedQuestions.length >= questions.length) {
-                usedQuestions = [];
-            }
-            
-            // Filter out questions that have already been used
-            const availableQuestions = questions.filter(q => !usedQuestions.includes(q));
-            
-            // If no available questions, reset and use all questions
-            if (availableQuestions.length === 0) {
-                usedQuestions = [];
-                return questions[Math.floor(Math.random() * questions.length)];
-            }
-            
-            // Select a random question from available questions
-            const selectedQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
-            usedQuestions.push(selectedQuestion);
-            
-            return selectedQuestion;
+        function getNextQuestion() {
+            // Return the next question in sequence
+            return questions[questionCount];
         }
 
         function updateScore() {
@@ -500,7 +466,7 @@
         }
 
         function updateQuestionCount() {
-            document.getElementById('question-count').textContent = `Pertanyaan: ${questionCount} / ${TOTAL_QUESTIONS}`;
+            document.getElementById('question-count').textContent = `Pertanyaan: ${questionCount + 1} / ${TOTAL_QUESTIONS}`;
         }
 
         // Function to format current date and time
@@ -613,23 +579,6 @@
             });
         }
         
-        // Function to take a screenshot of the leaderboard
-        function takeScreenshot() {
-            // For security reasons, browsers don't allow direct access to take screenshots
-            // This is just a simulation of that functionality
-            const notification = document.getElementById('screenshot-notification');
-            notification.style.display = 'block';
-            
-            // Hide the notification after 3 seconds
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 3000);
-            
-            // In a real application, you might want to use a library like html2canvas
-            // or implement a server-side solution to take actual screenshots
-            console.log("Screenshot would be taken here in a real application");
-        }
-        
         function showResultMessage() {
             // Save the score first
             saveScore();
@@ -643,9 +592,6 @@
             // Show the win message with leaderboard
             document.getElementById('win-message').style.display = 'block';
             canShoot = false;
-            
-            // Take a screenshot after a short delay (to ensure the leaderboard is fully rendered)
-            setTimeout(takeScreenshot, 500);
         }
 
         function setupTargets(question) {
@@ -825,12 +771,12 @@
                     // Move to next question after a delay
                     setTimeout(() => {
                         questionCount++;
-                        updateQuestionCount();
                         
                         if (questionCount >= TOTAL_QUESTIONS) {
-                            // End of game
+                            // Menampilkan leaderboard hanya setelah semua 10 soal dijawab
                             showResultMessage();
                         } else {
+                            updateQuestionCount();
                             setupNewQuestion();
                         }
                     }, 1500);
@@ -841,7 +787,7 @@
         }
 
         function setupNewQuestion() {
-            currentQuestion = getRandomQuestion();
+            currentQuestion = getNextQuestion();
             document.getElementById('question-container').textContent = currentQuestion.question;
             setupTargets(currentQuestion);
             canShoot = true; // Allow shooting again
@@ -863,42 +809,267 @@
             
             // Start game
             score = 0;
-            questionCount = 1;
+            questionCount = 0;
             updateScore();
             updateQuestionCount();
             setupNewQuestion();
         });
 
-        // Event listeners for end game buttons
-        document.getElementById('restart-button').addEventListener('click', () => {
-            document.getElementById('win-message').style.display = 'none';
-            
-            // Reset game
-            score = 0;
-            questionCount = 1;
-            updateScore();
-            updateQuestionCount();
-            setupNewQuestion();
-        });
+// Add event listener for restart button
+document.getElementById('restart-button').addEventListener('click', () => {
+    // Hide win message
+    document.getElementById('win-message').style.display = 'none';
+    
+    // Reset game state
+    score = 0;
+    questionCount = 0;
+    usedQuestions = [];
+    updateScore();
+    updateQuestionCount();
+    
+    // Start new game
+    setupNewQuestion();
+    canShoot = true;
+});
 
-        document.getElementById('exit-button').addEventListener('click', () => {
-            document.getElementById('win-message').style.display = 'none';
-            document.getElementById('game-container').style.display = 'none';
-            document.getElementById('registration-container').style.display = 'flex';
-            document.getElementById('player-name').value = '';
-        });
+// Add event listener for exit button
+document.getElementById('exit-button').addEventListener('click', () => {
+    // Show registration screen again
+    document.getElementById('registration-container').style.display = 'flex';
+    document.getElementById('game-container').style.display = 'none';
+    document.getElementById('win-message').style.display = 'none';
+    
+    // Clear player name field
+    document.getElementById('player-name').value = '';
+    
+    // Reset game state
+    score = 0;
+    questionCount = 0;
+    usedQuestions = [];
+});
 
-        // Initialize registration form
-        document.getElementById('player-name').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('start-game-btn').click();
+// Handle keyboard input for accessibility
+document.addEventListener('keydown', (e) => {
+    if (!canShoot) return;
+    
+    // Arrow keys to navigate between targets
+    const targets = document.querySelectorAll('.target');
+    if (targets.length === 2) {
+        if (e.key === 'ArrowLeft') {
+            // Focus left target
+            targets[0].focus();
+        } else if (e.key === 'ArrowRight') {
+            // Focus right target
+            targets[1].focus();
+        } else if (e.key === ' ' || e.key === 'Enter') {
+            // Shoot at focused target if it's focused
+            const focusedTarget = document.activeElement;
+            if (focusedTarget && focusedTarget.classList.contains('target')) {
+                const answerText = focusedTarget.querySelector('.answer-text').textContent;
+                shootArrow(focusedTarget, answerText === currentQuestion.correctAnswer);
+            }
+        }
+    }
+});
+
+// Make targets keyboard focusable for accessibility
+function makeTargetsFocusable() {
+    const targets = document.querySelectorAll('.target');
+    targets.forEach(target => {
+        target.setAttribute('tabindex', '0');
+        
+        // Add keyboard event for Enter/Space to shoot
+        target.addEventListener('keydown', (e) => {
+            if ((e.key === ' ' || e.key === 'Enter') && canShoot) {
+                const answerText = target.querySelector('.answer-text').textContent;
+                shootArrow(target, answerText === currentQuestion.correctAnswer);
+                e.preventDefault(); // Prevent page scroll on space
             }
         });
+    });
+}
 
-        // Auto-focus on player name input
-        window.onload = () => {
-            document.getElementById('player-name').focus();
-        };
-    </script>
+// Add observer to apply accessibility enhancements when targets are updated
+const targetContainerObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            makeTargetsFocusable();
+        }
+    }
+});
+
+targetContainerObserver.observe(document.querySelector('.target-container'), {
+    childList: true
+});
+
+// Add preloading for background images to improve loading experience
+function preloadBackgroundImages() {
+    const img = new Image();
+    img.src = 'bg1.jpg'; // Preload background image
+}
+
+// Call preload function
+preloadBackgroundImages();
+
+// Local storage functions to persist leaderboard between sessions
+function saveLeaderboardToStorage() {
+    localStorage.setItem('historyArcheryLeaderboard', JSON.stringify(leaderboardData));
+}
+
+function loadLeaderboardFromStorage() {
+    const savedData = localStorage.getItem('historyArcheryLeaderboard');
+    if (savedData) {
+        try {
+            leaderboardData = JSON.parse(savedData);
+        } catch (e) {
+            console.error('Error loading leaderboard data:', e);
+            leaderboardData = [];
+        }
+    }
+}
+
+// Save leaderboard when window is closing
+window.addEventListener('beforeunload', () => {
+    saveLeaderboardToStorage();
+});
+
+// Load saved leaderboard when page loads
+loadLeaderboardFromStorage();
+
+// Add sound effects
+const sounds = {
+    bowDraw: new Audio('bow-draw.mp3'),
+    bowRelease: new Audio('bow-release.mp3'),
+    targetHit: new Audio('target-hit.mp3'),
+    correctAnswer: new Audio('correct-answer.mp3'),
+    wrongAnswer: new Audio('wrong-answer.mp3'),
+    gameComplete: new Audio('game-complete.mp3')
+};
+
+// Function to play sound with error handling
+function playSound(soundName) {
+    try {
+        if (sounds[soundName]) {
+            sounds[soundName].currentTime = 0;
+            sounds[soundName].play().catch(error => {
+                console.log(`Sound play error: ${error.message}`);
+            });
+        }
+    } catch (error) {
+        console.log(`Sound error: ${error.message}`);
+    }
+}
+
+// Enhance shootArrow function with sound effects
+const originalShootArrow = shootArrow;
+shootArrow = function(target, isCorrect) {
+    playSound('bowRelease');
+    
+    // Call the original function
+    originalShootArrow(target, isCorrect);
+    
+    // Add appropriate sound based on answer
+    setTimeout(() => {
+        playSound('targetHit');
+        if (isCorrect) {
+            playSound('correctAnswer');
+        } else {
+            playSound('wrongAnswer');
+        }
+    }, 500);
+};
+
+// Add sound to game completion
+const originalShowResultMessage = showResultMessage;
+showResultMessage = function() {
+    playSound('gameComplete');
+    originalShowResultMessage();
+};
+
+// Add responsive design adjustments
+function adjustForScreenSize() {
+    const gameContainer = document.getElementById('game-container');
+    const targetContainer = document.querySelector('.target-container');
+    
+    if (window.innerWidth < 768) {
+        // Mobile adjustments
+        targetContainer.style.flexDirection = 'column';
+        targetContainer.style.gap = '100px';
+        targetContainer.style.top = '30%';
+    } else {
+        // Desktop layout
+        targetContainer.style.flexDirection = 'row';
+        targetContainer.style.gap = '200px';
+        targetContainer.style.top = '40%';
+    }
+}
+
+// Call on load and window resize
+window.addEventListener('load', adjustForScreenSize);
+window.addEventListener('resize', adjustForScreenSize);
+
+// Add touch support for mobile devices
+function addTouchSupport() {
+    // Touch events for bow aiming
+    document.addEventListener('touchmove', (e) => {
+        if (!canShoot) return;
+        
+        // Get touch position
+        const touch = e.touches[0];
+        
+        // Simulate mousemove event
+        const mouseEvent = new MouseEvent('mousemove', {
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+            bubbles: true
+        });
+        
+        document.dispatchEvent(mouseEvent);
+        e.preventDefault(); // Prevent scrolling
+    }, { passive: false });
+    
+    // Touch events for shooting
+    document.addEventListener('touchstart', (e) => {
+        if (!canShoot || !isAiming) return;
+        
+        const touch = e.touches[0];
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        if (element && (element.classList.contains('target') || element.closest('.target'))) {
+            const target = element.classList.contains('target') ? element : element.closest('.target');
+            const answerText = target.querySelector('.answer-text').textContent;
+            shootArrow(target, answerText === currentQuestion.correctAnswer);
+        }
+    });
+}
+
+// Add touch support when document is loaded
+document.addEventListener('DOMContentLoaded', addTouchSupport);
+
+// Add visual feedback for loading
+function showLoadingIndicator() {
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.id = 'loading-indicator';
+    loadingIndicator.style.position = 'fixed';
+    loadingIndicator.style.top = '50%';
+    loadingIndicator.style.left = '50%';
+    loadingIndicator.style.transform = 'translate(-50%, -50%)';
+    loadingIndicator.style.background = 'rgba(0, 0, 0, 0.7)';
+    loadingIndicator.style.color = 'white';
+    loadingIndicator.style.padding = '20px';
+    loadingIndicator.style.borderRadius = '10px';
+    loadingIndicator.style.zIndex = '2000';
+    loadingIndicator.textContent = 'Memuat Permainan...';
+    document.body.appendChild(loadingIndicator);
+    
+    // Remove the loading indicator after loading completes
+    window.addEventListener('load', () => {
+        document.body.removeChild(loadingIndicator);
+    });
+}
+
+// Show loading indicator when page starts loading
+document.addEventListener('DOMContentLoaded', showLoadingIndicator);
+</script>
 </body>
 </html>
